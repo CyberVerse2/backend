@@ -1,22 +1,21 @@
-import { ENVIRONMENT } from './common/config/environment.js';
-import express from 'express';
-import AppError from './common/utils/appError.js';
-import { setRoutes } from './modules/routes/index.js';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import AppError from './common/utils/appError';
+import { setRoutes } from './modules/routes/index';
+import { ENVIRONMENT } from './common/config/environment';
 import {
   catchAsync,
   handleError,
   timeoutMiddleware
-} from './common/utils/errorHandler.js';
-import cors from 'cors';
-import helmet from 'helmet';
-import { stream } from './common/utils/logger.js';
-import morgan from 'morgan';
-import { connectDb } from './common/config/database.js';
+} from './common/utils/errorHandler';
+import { stream } from './common/utils/logger';
 
 /**
  * Default app configurations
  */
-const app = express();
+const app: Express = express();
 const port = ENVIRONMENT.APP.PORT;
 const appName = ENVIRONMENT.APP.NAME;
 
@@ -37,8 +36,11 @@ app.use(
 );
 
 // append request time to all request
-app.use((req, res, next) => {
-  req.requestTime = new Date().toISOString();
+interface CustomRequest extends Request {
+  requestTime: string;
+}
+app.use((req: Request, res: Response, next: NextFunction) => {
+  (<CustomRequest>req).requestTime = new Date().toISOString();
   next();
 });
 
@@ -50,7 +52,7 @@ app.use('/', setRoutes());
 // catch 404 and forward to error handler
 app.all(
   '*',
-  catchAsync(async (req, res) => {
+  catchAsync(async (req: Request, res: Response) => {
     throw new AppError('route not found', 404);
   })
 );
@@ -64,7 +66,7 @@ app.use(handleError);
 /**
  * status check
  */
-app.get('*', (req, res) =>
+app.get('*', (req: Request, res: Response) =>
   res.send({
     Time: new Date(),
     status: 'running'
@@ -76,5 +78,4 @@ app.get('*', (req, res) =>
  */
 app.listen(port, () => {
   console.log('=> ' + appName + 'app listening on port' + port + '!');
-  connectDb();
 });
